@@ -9,6 +9,7 @@
 #include <stdbool.h>
 
 #define MAX 2048
+#define BLOCK_SIZE 64  // 블로킹 사이즈
 
 int A[MAX][MAX];    /* multiplier matrix */
 int B[MAX][MAX];    /* multiplicand matrix */
@@ -92,15 +93,22 @@ void *matmult_multi_threaded(void *arg) {
         print_thread_info(data);
     }
 
-    for (int row = start_row; row < end_row; row++) {
-        for (int col = 0; col < N; col++) {
-            int t = 0;
-            for (int k = 0; k < N; k++) {
-                t += A[row][k] * B[k][col];
+    for (int row = start_row; row < end_row; row += BLOCK_SIZE) {
+        for (int col = 0; col < N; col += BLOCK_SIZE) {
+            for (int k = 0; k < N; k += BLOCK_SIZE) {
+                for (int i = row; i < row + BLOCK_SIZE && i < end_row; i++) {
+                    for (int j = col; j < col + BLOCK_SIZE && j < N; j++) {
+                        int t = 0;
+                        for (int l = k; l < k + BLOCK_SIZE && l < N; l++) {
+                            t += A[i][l] * B[l][j];
+                        }
+                        C[i][j] += t;
+                    }
+                }
             }
-            C[row][col] = t;
         }
     }
+
     return NULL;
 }
 
